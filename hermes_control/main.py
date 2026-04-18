@@ -1,12 +1,16 @@
 """FastAPI entry point — wires routes to the docker + state readers."""
 import asyncio
+import json
 import socket
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from hermes_control import __version__
 from hermes_control.auth import require_bearer
+from hermes_control.chat import ChatRequest, run_chat
 from hermes_control.config import config
 from hermes_control import docker_ctl, state_reader
 
@@ -118,6 +122,46 @@ async def orphans() -> list[dict[str, Any]]:
 @app.post("/orphans/prune", dependencies=[Depends(require_bearer)])
 async def orphans_prune() -> dict[str, Any]:
     return await docker_ctl.prune_orphans(config.container_name)
+
+
+class ChatBody(BaseModel):
+    prompt: str
+    session_id: str | None = None
+    max_turns: int = 30
+    skills: list[str] = []
+    source: str = "crucible"
+
+
+@app.post("/chat", dependencies=[Depends(require_bearer)])
+async def chat(body: ChatBody) -> StreamingResponse:
+    """Stream a one-shot hermes chat turn as SSE.
+
+    Body:
+      prompt       — user message
+      session_id   — pass the sid from a previous /chat response to continue the conversation
+      max_turns    — cap hermes's tool-call iterations (default 30)
+      skills       — optional list of skill names to preload for this turn
+      source       — session tag (default 'crucible')
+    """
+    req = ChatRequest(
+        prompt=body.prompt,
+        session_id=body.session_id,
+        max_turns=body.max_turns,
+        skills=body.skills,
+        source=body.source,
+    )
+
+    async def _stream():
+        # 2KB pad so every chunk gets flushed through any proxy
+        pad = ":" + (" " * 2048) + "\n"
+        async for evt in run_chat(req):
+            yield pad + f"data: {json.dumps(evt)}\n\n"
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 def run() -> None:
