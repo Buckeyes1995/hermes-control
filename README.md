@@ -7,7 +7,7 @@ Runs natively on the same host as the hermes container. Reads hermes's bind-moun
 ## Architecture
 
 ```
-Crucible  ──HTTP/bearer──►  hermes-control (FastAPI :7878)
+Crucible  ──HTTP/bearer──►  hermes-control (FastAPI :7879)
                                     │
                            reads ~/docker-projects/hermes-agent/data/
                            runs   docker pause|unpause|restart|logs hermes-agent
@@ -38,7 +38,7 @@ launchctl load -w ~/Library/LaunchAgents/com.jim.hermes-control.plist
 
 # 5. Verify
 curl -H "Authorization: Bearer $(cat ~/.config/hermes-control/token)" \
-     http://localhost:7878/status | python3 -m json.tool
+     http://localhost:7879/status | python3 -m json.tool
 ```
 
 ## Endpoints
@@ -69,7 +69,7 @@ Env vars (all optional — defaults match a stock install):
 | `HERMES_DATA_DIR` | `~/docker-projects/hermes-agent/data` |
 | `HERMES_CONTROL_TOKEN_PATH` | `~/.config/hermes-control/token` |
 | `HERMES_CONTROL_HOST` | `0.0.0.0` |
-| `HERMES_CONTROL_PORT` | `7878` |
+| `HERMES_CONTROL_PORT` | `7879` |
 | `HERMES_CONTROL_MAX_LOG_TAIL` | `5000` |
 
 ## Safety

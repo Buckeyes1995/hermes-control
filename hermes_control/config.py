@@ -17,7 +17,9 @@ class Config:
             str(Path.home() / ".config" / "hermes-control" / "token"),
         ))
         self.host = os.environ.get("HERMES_CONTROL_HOST", "0.0.0.0")
-        self.port = int(os.environ.get("HERMES_CONTROL_PORT", "7878"))
+        # 7878 conflicts with OrbStack's own host-agent port on macOS, so default
+        # to 7879. Any Crucible agent entry needs to match whatever port this binds.
+        self.port = int(os.environ.get("HERMES_CONTROL_PORT", "7879"))
         # Log lookback cap — protects us from a user asking for 1M lines over the network
         self.max_log_tail = int(os.environ.get("HERMES_CONTROL_MAX_LOG_TAIL", "5000"))
 
