@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jim.hermes-control</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/jim/.venvs/hermes-control/bin/python</string>
+        <string>-m</string>
+        <string>hermes_control.main</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/jim/projects/hermes-control</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/jim</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jim/Library/Logs/hermes-control.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/jim/Library/Logs/hermes-control.log</string>
+</dict>
+</plist>
