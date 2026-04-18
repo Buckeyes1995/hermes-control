@@ -40,53 +40,39 @@ def read_cron_jobs() -> dict[str, Any]:
     except (json.JSONDecodeError, OSError):
         return result
 
-    # We don't know exactly how hermes shapes this JSON — it could be a list
-    # or a dict keyed by job id. Handle both.
+    # Hermes v0.4+ shape: { "jobs": [...] }. Older shapes might be a bare list
+    # or a dict keyed by id — handle all three.
+    entries: list[dict[str, Any]] = []
     if isinstance(raw, dict):
-        entries = [{"id": k, **v} if isinstance(v, dict) else {"id": k, "value": v}
-                   for k, v in raw.items()]
+        if isinstance(raw.get("jobs"), list):
+            entries = [j for j in raw["jobs"] if isinstance(j, dict)]
+        else:
+            entries = [{"id": k, **v} for k, v in raw.items() if isinstance(v, dict)]
     elif isinstance(raw, list):
-        entries = raw
-    else:
-        entries = []
-
-    # Peek at cron/output/ for last-run hints
-    output_mtimes: dict[str, float] = {}
-    try:
-        for p in config.cron_output_dir.iterdir():
-            # hermes names output files like `<job-id>-<timestamp>.ndjson` or similar;
-            # we just capture the most recent mtime per prefix token.
-            token = p.name.split("-", 1)[0]
-            mt = p.stat().st_mtime
-            if mt > output_mtimes.get(token, 0):
-                output_mtimes[token] = mt
-    except FileNotFoundError:
-        pass
+        entries = [j for j in raw if isinstance(j, dict)]
 
     # Normalize each job into a stable shape for the UI
     normalized = []
     for j in entries:
-        if not isinstance(j, dict):
-            continue
         jid = str(j.get("id") or j.get("name") or "")
-        last_run_at = None
-        # Try explicit field, else infer from output file mtime
-        if "last_run" in j and isinstance(j["last_run"], (int, float)):
-            last_run_at = _iso(float(j["last_run"]))
-        elif jid and any(jid.startswith(t) for t in output_mtimes):
-            best = max((output_mtimes[t] for t in output_mtimes if jid.startswith(t)), default=0)
-            if best:
-                last_run_at = _iso(best)
+        # schedule can be a nested {kind,expr,display} or a flat string
+        schedule = j.get("schedule")
+        if isinstance(schedule, dict):
+            schedule_str = schedule.get("display") or schedule.get("expr") or ""
+        else:
+            schedule_str = str(schedule or j.get("cron") or "")
         normalized.append({
             "id": jid,
             "name": j.get("name") or jid,
-            "schedule": j.get("schedule") or j.get("cron") or "",
-            "command": j.get("command") or j.get("prompt") or j.get("task") or "",
+            "schedule": schedule_str,
+            "command": j.get("prompt") or j.get("command") or j.get("task") or "",
+            "script": j.get("script"),
             "enabled": j.get("enabled", True),
-            "last_run_at": last_run_at,
-            "next_run_at": j.get("next_run") or None,
-            "last_status": j.get("last_status") or None,
-            "raw": j,  # for debugging / power users
+            "state": j.get("state"),
+            "last_run_at": j.get("last_run_at"),
+            "next_run_at": j.get("next_run_at"),
+            "last_status": j.get("last_status"),
+            "last_error": j.get("last_error"),
         })
     result["jobs"] = normalized
     return result
